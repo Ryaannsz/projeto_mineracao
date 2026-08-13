@@ -1,14 +1,14 @@
 # Mineracao de Dados - Pet Shop Nosso Aumigo
 
-O ambiente inicia tres bases locais e carrega os arquivos SQL e JSON da pasta de fontes:
+O ambiente inicia tres bases locais e carrega os arquivos SQL e JSON da pasta `data/`:
 
 | Base | Origem | Banco/schema |
 | --- | --- | --- |
-| Oracle | `01_salvador_ddl.sql` e `02_salvador_dml.sql` | `petshop` em `FREEPDB1` |
-| PostgreSQL | `03_Itabuna_ddl.sql` e `04_itabuna_dml.sql` | `petshop_itabuna` |
-| MongoDB | `05_Feira_Clientes.json`, `06_Feira_Produtos.json` e `07_Feira_pedidos.json` | `petshop_feira` |
+| Oracle | `data/oracle/` | `petshop` em `FREEPDB1` |
+| PostgreSQL | `data/postgres/` | `petshop_itabuna` |
+| MongoDB | `data/mongodb/` | `petshop_feira` |
 
-O arquivo `08_Vendas_Concorrente.xlsx` permanece somente como planilha na pasta de fontes e nao e carregado em nenhum banco.
+O arquivo `data/planilhas/08_vendas_concorrente.xlsx` permanece somente como planilha e nao e carregado em nenhum banco.
 
 ## Subir as bases
 
@@ -36,27 +36,63 @@ docker compose up -d --build
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
-python -m src.verificar_conexoes
+python main.py verificar-conexoes
 ```
 
-O modulo `src.conexoes` oferece as funcoes `conectar_oracle()`, `conectar_postgres()` e `conectar_mongodb()`.
+## Arquitetura ETL
+
+O projeto usa a propria raiz `mineracao_dados/` como raiz Python, sem uma pasta `src/` intermediaria:
+
+| Pasta | Responsabilidade |
+| --- | --- |
+| `config/` | Le configuracoes de ambiente e credenciais. |
+| `data/` | Separa dados de Oracle, PostgreSQL, MongoDB e planilhas. |
+| `infrastructure/` | Abre e fecha conexoes com Oracle, PostgreSQL e MongoDB. |
+| `models/` | Define contratos tipados das fontes e do modelo dimensional. |
+| `repositories/` | Extrai cada fonte e concentra consultas especificas do banco. |
+| `services/` | Orquestra extracao, transformacao, validacao de referencias e carga. |
+| `tests/` | Testes unitarios das regras de transformacao. |
+
+O modelo canonico preserva a origem de cada registro em chaves como `salvador:1`, `itabuna:1` e `feira_de_santana:1`. Assim, IDs iguais em bancos diferentes nao colidem no OLAP.
+
+O lote dimensional esta definido em `models/olap.py`:
+
+| Estrutura | Grao |
+| --- | --- |
+| `DimensaoCliente` | Um cliente por fonte. |
+| `DimensaoData` | Uma data com chave no formato `AAAAMMDD`. |
+| `DimensaoProduto` | Um produto por fonte. |
+| `DimensaoServico` | Um servico por fonte. |
+| `FatoItemVenda` | Um item de venda/pedido. |
+| `FatoAtendimentoServico` | Um atendimento de servico. |
+
+Para extrair e transformar tudo, sem gravar em um destino ainda:
+
+```bash
+python main.py preparar-lote
+```
+
+Esse comando retorna as quantidades de dimensoes e fatos preparadas para carga.
+
+## Destino OLAP
+
+O destino ainda nao foi escolhido, portanto o ETL nao esta acoplado a um banco especifico. O contrato `RepositorioOlap`, em `repositories/contracts.py`, recebe um `LoteOlap` pronto para persistir.
+
+Quando o banco OLAP for definido, implemente um repositorio e injete-o no pipeline:
 
 ```python
-from src.conexoes import banco_mongodb, conectar_oracle, conectar_postgres
+from bootstrap import criar_pipeline
+from models import LoteOlap
 
-with conectar_oracle() as oracle:
-    with oracle.cursor() as cursor:
-        cursor.execute("SELECT * FROM clientes FETCH FIRST 5 ROWS ONLY")
-        print(cursor.fetchall())
 
-with conectar_postgres() as postgres:
-    with postgres.cursor() as cursor:
-        cursor.execute("SELECT * FROM clientes LIMIT 5")
-        print(cursor.fetchall())
+class MeuRepositorioOlap:
+    def carregar(self, lote: LoteOlap) -> None:
+        # Inserir dimensoes antes das tabelas fato.
+        pass
 
-mongo = banco_mongodb()
-print(list(mongo.pedidos.find().limit(5)))
-mongo.client.close()
+
+pipeline = criar_pipeline()
+pipeline.executar(MeuRepositorioOlap())
 ```
 
 As conexoes Python usam `localhost` por padrao. Caso o codigo Python execute dentro de outro container da mesma composicao, defina `ORACLE_HOST=oracle`, `POSTGRES_HOST=postgres` e `MONGODB_HOST=mongodb`.

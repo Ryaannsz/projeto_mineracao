@@ -51,19 +51,19 @@ def main() -> None:
         upsert_documents(
             database,
             "clientes",
-            read_json("05_Feira_Clientes.json"),
+            read_json("05_feira_clientes.json"),
             ["id_cliente"],
         )
         upsert_documents(
             database,
             "produtos",
-            read_json("06_Feira_Produtos.json"),
+            read_json("06_feira_produtos.json"),
             ["id_produto"],
         )
         upsert_documents(
             database,
             "pedidos",
-            read_json("07_Feira_pedidos.json"),
+            read_json("07_feira_pedidos.json"),
             ["id_pedido"],
         )
     finally:

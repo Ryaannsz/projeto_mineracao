@@ -1,14 +1,14 @@
--- Inserção das categorias
-INSERT INTO categorias VALUES (1, 'Rações');
+-- Inserï¿½ï¿½o das categorias
+INSERT INTO categorias VALUES (1, 'Raï¿½ï¿½es');
 INSERT INTO categorias VALUES (2, 'Medicamentos');
-INSERT INTO categorias VALUES (3, 'Acessórios');
+INSERT INTO categorias VALUES (3, 'Acessï¿½rios');
 INSERT INTO categorias VALUES (4, 'Brinquedos');
 INSERT INTO categorias VALUES (5, 'Higiene');
 INSERT INTO categorias VALUES (6, 'Petiscos');
 INSERT INTO categorias VALUES (7, 'Camas');
 INSERT INTO categorias VALUES (8, 'Comedouros');
 
--- Inserção dos produtos
+-- Inserï¿½ï¿½o dos produtos
 INSERT INTO produtos VALUES (1, 'Racao Premium Caes', 129.9, 1);
 INSERT INTO produtos VALUES (2, 'Racao Premium Gatos', 119.9, 1);
 INSERT INTO produtos VALUES (3, 'Antipulgas', 79.9, 2);
@@ -27,7 +27,7 @@ INSERT INTO produtos VALUES (15, 'Bebedouro Automatico', 119.9, NULL);
 INSERT INTO produtos VALUES (16, 'Escova para Pelos', 18.9, NULL);
 INSERT INTO produtos VALUES (17, 'Caixa de Transporte', 159.9, NULL);
 
--- Inserção dos clientes
+-- Inserï¿½ï¿½o dos clientes
 INSERT INTO clientes VALUES (1, 'Patricia Pereira', 'cliente1@aumigo.com', '(71)935992786', 'F', 'U', TO_DATE('01/12/1981','DD/MM/YYYY'), SYSDATE);
 INSERT INTO clientes VALUES (2, 'Ana Almeida', 'cliente2@aumigo.com', '(71)945042906', 'M', 'U', TO_DATE('12/03/1982','DD/MM/YYYY'), SYSDATE);
 INSERT INTO clientes VALUES (3, 'Jose Almeida', 'cliente3@aumigo.com', '(71)988524380', 'M', 'C', TO_DATE('12/03/1990','DD/MM/YYYY'), SYSDATE);
@@ -230,7 +230,7 @@ INSERT INTO clientes VALUES (199, 'Rafael Almeida', 'cliente199@aumigo.com', '(7
 INSERT INTO clientes VALUES (200, 'Daniela Costa', 'cliente200@aumigo.com', '(71)919202146', 'F', 'U', TO_DATE('11/10/1981','DD/MM/YYYY'), SYSDATE);
 
 
--- Inserção das vendas
+-- Inserï¿½ï¿½o das vendas
 INSERT INTO vendas VALUES (1, 4, TO_DATE('15/01/2025','DD/MM/YYYY')); 
 INSERT INTO itens_venda VALUES (1, 1, 1, 2, 129.9);
 INSERT INTO itens_venda VALUES (2, 1, 9, 4, 34.9);
