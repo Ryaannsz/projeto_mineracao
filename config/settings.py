@@ -32,10 +32,20 @@ class ConfiguracaoMongo:
 
 
 @dataclass(frozen=True, slots=True)
+class ConfiguracaoOlap:
+    host: str
+    porta: int
+    banco: str
+    usuario: str
+    senha: str
+
+
+@dataclass(frozen=True, slots=True)
 class ConfiguracaoAplicacao:
     oracle: ConfiguracaoOracle
     postgres: ConfiguracaoPostgres
     mongo: ConfiguracaoMongo
+    olap: ConfiguracaoOlap
 
 
 def carregar_configuracao() -> ConfiguracaoAplicacao:
@@ -68,5 +78,12 @@ def carregar_configuracao() -> ConfiguracaoAplicacao:
                 f"mongodb://{mongo_usuario}:{mongo_senha}@{mongo_host}:{mongo_porta}/?authSource=admin",
             ),
             banco=os.getenv("MONGO_DATABASE", "petshop_feira"),
+        ),
+        olap=ConfiguracaoOlap(
+            host=os.getenv("OLAP_POSTGRES_HOST", "localhost"),
+            porta=int(os.getenv("OLAP_POSTGRES_PORT", "5433")),
+            banco=os.getenv("OLAP_POSTGRES_DB", "petshop_olap"),
+            usuario=os.getenv("OLAP_POSTGRES_USER", "petshop"),
+            senha=os.getenv("OLAP_POSTGRES_PASSWORD", "Olap123"),
         ),
     )

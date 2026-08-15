@@ -36,6 +36,24 @@ services:
       timeout: 5s
       retries: 10
 
+  postgres-olap:
+    build:
+      context: .
+      dockerfile: docker/olap/Dockerfile
+    environment:
+      POSTGRES_DB: ${OLAP_POSTGRES_DB:-petshop_olap}
+      POSTGRES_USER: ${OLAP_POSTGRES_USER:-petshop}
+      POSTGRES_PASSWORD: ${OLAP_POSTGRES_PASSWORD:-Olap123}
+    ports:
+      - "${OLAP_POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - olap_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   mongodb:
     # MongoDB 7 evita a incompatibilidade conhecida do MongoDB 8 com kernel Linux 6.19.
     image: docker.io/library/mongo:7.0
@@ -65,3 +83,4 @@ volumes:
   oracle_data:
   postgres_data:
   mongo_data:
+  olap_data:

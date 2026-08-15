@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from config import ConfiguracaoAplicacao, carregar_configuracao
 from infrastructure import GerenciadorConexoes
-from repositories import RepositorioMongo, RepositorioOracle, RepositorioPostgres
+from repositories import (
+    RepositorioMongo,
+    RepositorioOlapPostgres,
+    RepositorioOracle,
+    RepositorioPostgres,
+)
 from services import ServicoExtracao, ServicoPipeline, ServicoTransformacao
 
 
@@ -17,3 +22,10 @@ def criar_pipeline(configuracao: ConfiguracaoAplicacao | None = None) -> Servico
         )
     )
     return ServicoPipeline(extracao, ServicoTransformacao())
+
+
+def criar_repositorio_olap(
+    configuracao: ConfiguracaoAplicacao | None = None,
+) -> RepositorioOlapPostgres:
+    """Monta o destino PostgreSQL da camada Gold."""
+    return RepositorioOlapPostgres(GerenciadorConexoes(configuracao or carregar_configuracao()))

@@ -1,98 +1,111 @@
-# Mineracao de Dados - Pet Shop Nosso Aumigo
+# Mineração de Dados — Pet Shop Nosso Aumigo
 
-O ambiente inicia tres bases locais e carrega os arquivos SQL e JSON da pasta `data/`:
+Este projeto integra as vendas de produtos das filiais Salvador, Itabuna e Feira de Santana em um banco OLAP PostgreSQL. A primeira versão da camada Gold deliberadamente contempla somente as vendas próprias; a planilha da concorrência permanece disponível como fonte, mas não é carregada no modelo estrela.
 
-| Base | Origem | Banco/schema |
-| --- | --- | --- |
-| Oracle | `data/oracle/` | `petshop` em `FREEPDB1` |
-| PostgreSQL | `data/postgres/` | `petshop_itabuna` |
-| MongoDB | `data/mongodb/` | `petshop_feira` |
+## Arquitetura medalhão
 
-O arquivo `data/planilhas/08_vendas_concorrente.xlsx` permanece somente como planilha e nao e carregado em nenhum banco.
+```text
+Bronze  -> fontes brutas: Oracle, PostgreSQL, MongoDB e Excel
+Silver  -> itens de venda próprios, padronizados e ainda sem agregação
+Gold    -> esquema estrela PostgreSQL, agregado para análise
+```
+
+- **Bronze:** os repositórios extraem os dados sem aplicar regra analítica.
+- **Silver:** cada item de venda recebe cidade da filial, estado civil normalizado, produto/categoria padronizados, ano e quadrimestre. Seu grão continua sendo um item de venda.
+- **Gold:** consolida os itens no grão `ano × quadrimestre × produto × cidade × estado civil`.
+
+## Esquema estrela Gold
+
+```mermaid
+erDiagram
+    DIM_TEMPO ||--o{ FATO_VENDAS : periodo
+    DIM_PRODUTO ||--o{ FATO_VENDAS : produto
+    DIM_CIDADE ||--o{ FATO_VENDAS : cidade
+    DIM_ESTADO_CIVIL ||--o{ FATO_VENDAS : estado_civil
+
+    DIM_TEMPO {
+        smallint id_tempo PK
+        smallint ano
+        smallint quadrimestre
+    }
+    DIM_PRODUTO {
+        bigint id_produto PK
+        varchar nome
+        varchar categoria
+    }
+    DIM_CIDADE {
+        smallint id_cidade PK
+        varchar cidade
+    }
+    DIM_ESTADO_CIVIL {
+        smallint id_estado_civil PK
+        varchar descricao
+    }
+    FATO_VENDAS {
+        bigint id_fato PK
+        smallint id_tempo FK
+        bigint id_produto FK
+        smallint id_cidade FK
+        smallint id_estado_civil FK
+        integer quantidade_vendida
+        numeric valor_vendido
+    }
+```
+
+**Grão da fato:** uma linha para cada combinação de `ano × quadrimestre × produto × cidade × estado civil`.
+
+`fato_vendas` possui as medidas `quantidade_vendida` e `valor_vendido`. Não há dimensão diária, mês, UF, cliente, sexo ou serviços, pois eles não são necessários para os indicadores definidos nesta etapa. O DDL físico está em [`data/olap/01_olap_ddl.sql`](data/olap/01_olap_ddl.sql).
+
+## Definition of Done — etapa atual
+
+| Item | Situação |
+| --- | --- |
+| Integração das vendas próprias de Salvador, Itabuna e Feira de Santana | Concluído |
+| Padronização Silver no grão de item de venda | Concluído |
+| Estrela Gold e carga no PostgreSQL OLAP | Concluído |
+| Indicadores por produto/categoria, cidade, quadrimestre/ano e estado civil | Cobertos pelo modelo |
+| Comparação com a concorrência | **Não implementado** |
+
+A planilha da concorrência está preservada na fonte Bronze, mas não entra na Silver ou Gold. Ela contém somente valor mensal de vendas, sem quantidade, produto, cidade ou perfil de cliente; por isso, a estratégia de modelagem e o indicador de comparação serão validados com o professor antes de uma nova implementação.
 
 ## Subir as bases
 
-Opcionalmente, crie um arquivo `.env` a partir de `.env.example` para trocar senhas e portas. Os mesmos valores de desenvolvimento ja possuem padroes no `docker-compose.yml`.
+Crie `.env` a partir de `.env.example` caso queira trocar portas ou credenciais. Os valores de desenvolvimento já têm padrões em `docker-compose.yml`.
 
 ```bash
 docker compose up -d --build
 docker compose logs -f mongodb-loader
 ```
 
-O primeiro inicio do Oracle pode levar alguns minutos porque a imagem precisa preparar os arquivos do banco. PostgreSQL e MongoDB ficam disponiveis logo apos seus healthchecks.
+Além das três fontes operacionais, a composição inicia `postgres-olap` na porta `5433`. O esquema Gold é criado automaticamente na primeira inicialização do volume.
 
-O `mongodb-loader` termina depois de importar os dados. Ele usa upserts, portanto pode ser executado novamente sem duplicar documentos.
-
-As cargas de Oracle e PostgreSQL ocorrem somente na primeira criacao de seus volumes. Para recriar todas as bases e importar novamente:
+Para recriar todas as bases locais e suas cargas iniciais:
 
 ```bash
 docker compose down -v
 docker compose up -d --build
 ```
 
-## Usar no Python
+## Executar o ETL
 
 ```bash
-python -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
-python main.py verificar-conexoes
+uv sync
+
+uv run python main.py verificar-conexoes
+uv run python main.py carregar-olap
 ```
 
-## Arquitetura ETL
+`uv sync` cria/atualiza o ambiente virtual conforme o `uv.lock`, garantindo as mesmas versões de dependências para todos. `carregar-olap` executa Bronze → Silver → Gold e substitui o conteúdo das dimensões e da fato no PostgreSQL OLAP por uma carga completa e consistente.
 
-O projeto usa a propria raiz `mineracao_dados/` como raiz Python, sem uma pasta `src/` intermediaria:
+## Organização do código
 
 | Pasta | Responsabilidade |
 | --- | --- |
-| `config/` | Le configuracoes de ambiente e credenciais. |
-| `data/` | Separa dados de Oracle, PostgreSQL, MongoDB e planilhas. |
-| `infrastructure/` | Abre e fecha conexoes com Oracle, PostgreSQL e MongoDB. |
-| `models/` | Define contratos tipados das fontes e do modelo dimensional. |
-| `repositories/` | Extrai cada fonte e concentra consultas especificas do banco. |
-| `services/` | Orquestra extracao, transformacao, validacao de referencias e carga. |
-| `tests/` | Testes unitarios das regras de transformacao. |
+| `data/` | Dados das fontes e DDL do OLAP. |
+| `models/` | Contratos Bronze, Silver e Gold. |
+| `repositories/` | Extração das fontes e carga PostgreSQL do Gold. |
+| `services/` | Transformação e orquestração do pipeline. |
+| `docker/` | Imagens das fontes e do PostgreSQL OLAP. |
+| `tests/` | Testes das regras Silver e Gold. |
 
-O modelo canonico preserva a origem de cada registro em chaves como `salvador:1`, `itabuna:1` e `feira_de_santana:1`. Assim, IDs iguais em bancos diferentes nao colidem no OLAP.
-
-O lote dimensional esta definido em `models/olap.py`:
-
-| Estrutura | Grao |
-| --- | --- |
-| `DimensaoCliente` | Um cliente por fonte. |
-| `DimensaoData` | Uma data com chave no formato `AAAAMMDD`. |
-| `DimensaoProduto` | Um produto por fonte. |
-| `DimensaoServico` | Um servico por fonte. |
-| `FatoItemVenda` | Um item de venda/pedido. |
-| `FatoAtendimentoServico` | Um atendimento de servico. |
-
-Para extrair e transformar tudo, sem gravar em um destino ainda:
-
-```bash
-python main.py preparar-lote
-```
-
-Esse comando retorna as quantidades de dimensoes e fatos preparadas para carga.
-
-## Destino OLAP
-
-O destino ainda nao foi escolhido, portanto o ETL nao esta acoplado a um banco especifico. O contrato `RepositorioOlap`, em `repositories/contracts.py`, recebe um `LoteOlap` pronto para persistir.
-
-Quando o banco OLAP for definido, implemente um repositorio e injete-o no pipeline:
-
-```python
-from bootstrap import criar_pipeline
-from models import LoteOlap
-
-
-class MeuRepositorioOlap:
-    def carregar(self, lote: LoteOlap) -> None:
-        # Inserir dimensoes antes das tabelas fato.
-        pass
-
-
-pipeline = criar_pipeline()
-pipeline.executar(MeuRepositorioOlap())
-```
-
-As conexoes Python usam `localhost` por padrao. Caso o codigo Python execute dentro de outro container da mesma composicao, defina `ORACLE_HOST=oracle`, `POSTGRES_HOST=postgres` e `MONGODB_HOST=mongodb`.
+As conexões Python usam `localhost` por padrão. Dentro de um container, use os hosts `oracle`, `postgres`, `mongodb` e `postgres-olap`.

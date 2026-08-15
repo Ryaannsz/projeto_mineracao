@@ -1,3 +1,3 @@
-from .settings import ConfiguracaoAplicacao, carregar_configuracao
+from .settings import ConfiguracaoAplicacao, ConfiguracaoOlap, carregar_configuracao
 
-__all__ = ["ConfiguracaoAplicacao", "carregar_configuracao"]
+__all__ = ["ConfiguracaoAplicacao", "ConfiguracaoOlap", "carregar_configuracao"]

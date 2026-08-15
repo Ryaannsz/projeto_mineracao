@@ -52,6 +52,22 @@ class GerenciadorConexoes:
             conexao.close()
 
     @contextmanager
+    def olap(self) -> Iterator[Any]:
+        configuracao = self._configuracao.olap
+        conexao = psycopg.connect(
+            host=configuracao.host,
+            port=configuracao.porta,
+            dbname=configuracao.banco,
+            user=configuracao.usuario,
+            password=configuracao.senha,
+            connect_timeout=5,
+        )
+        try:
+            yield conexao
+        finally:
+            conexao.close()
+
+    @contextmanager
     def mongo(self) -> Iterator[Any]:
         configuracao = self._configuracao.mongo
         cliente = MongoClient(configuracao.uri, serverSelectionTimeoutMS=5_000)

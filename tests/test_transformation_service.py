@@ -14,19 +14,19 @@ from services import ServicoTransformacao
 
 
 class ServicoTransformacaoTest(TestCase):
-    def test_cria_dimensoes_e_fato_no_grao_do_item(self) -> None:
+    def test_preserva_item_na_silver_e_agrega_na_gold(self) -> None:
         dados = DadosFonte(
             origem=FonteDados.SALVADOR,
             clientes=(
                 ClienteOrigem(
                     origem=FonteDados.SALVADOR,
                     id_cliente="1",
-                    nome=" Ana   Silva ",
-                    email="ANA@EXAMPLE.COM",
+                    nome="Ana Silva",
+                    email=None,
                     telefone=None,
-                    sexo="Feminino",
+                    sexo="F",
                     estado_civil="U",
-                    data_nascimento=date(1990, 1, 1),
+                    data_nascimento=None,
                     data_cadastro=None,
                 ),
             ),
@@ -44,7 +44,7 @@ class ServicoTransformacaoTest(TestCase):
                     origem=FonteDados.SALVADOR,
                     id_venda="100",
                     id_cliente="1",
-                    data_venda=date(2025, 1, 15),
+                    data_venda=date(2025, 4, 15),
                     valor_total=None,
                 ),
             ),
@@ -57,16 +57,78 @@ class ServicoTransformacaoTest(TestCase):
                     quantidade=2,
                     valor_unitario=Decimal("12.50"),
                 ),
+                ItemVendaOrigem(
+                    origem=FonteDados.SALVADOR,
+                    id_item="1001",
+                    id_venda="100",
+                    id_produto="10",
+                    quantidade=3,
+                    valor_unitario=Decimal("12.50"),
+                ),
             ),
         )
 
-        lote = ServicoTransformacao().transformar((dados,))
+        transformacao = ServicoTransformacao()
+        silver = transformacao.transformar_silver((dados,))
+        gold = transformacao.transformar_gold(silver)
 
-        self.assertEqual(lote.quantidades()["dimensao_clientes"], 1)
-        self.assertEqual(lote.quantidades()["dimensao_datas"], 1)
-        self.assertEqual(lote.quantidades()["fato_itens_venda"], 1)
-        self.assertEqual(lote.clientes[0].nome, "Ana Silva")
-        self.assertEqual(lote.clientes[0].email, "ana@example.com")
-        self.assertEqual(lote.clientes[0].estado_civil, "Uniao Estavel")
-        self.assertEqual(lote.fatos_itens_venda[0].valor_total_item, Decimal("25.00"))
-        self.assertEqual(lote.fatos_itens_venda[0].chave_data, 20250115)
+        self.assertEqual(silver.quantidades(), {"vendas_silver": 2})
+        self.assertEqual(silver.vendas[0].cidade, "Salvador")
+        self.assertEqual(silver.vendas[0].quadrimestre, 1)
+        self.assertEqual(silver.vendas[0].estado_civil, "Uniao Estavel")
+        self.assertEqual(gold.quantidades()["fato_vendas"], 1)
+        self.assertEqual(gold.fatos_vendas[0].quantidade_vendida, 5)
+        self.assertEqual(gold.fatos_vendas[0].valor_vendido, Decimal("62.50"))
+
+    def test_substitui_estado_civil_ausente_por_nao_informado(self) -> None:
+        dados = DadosFonte(
+            origem=FonteDados.ITABUNA,
+            clientes=(
+                ClienteOrigem(
+                    origem=FonteDados.ITABUNA,
+                    id_cliente="1",
+                    nome="Ana Silva",
+                    email=None,
+                    telefone=None,
+                    sexo=None,
+                    estado_civil=None,
+                    data_nascimento=None,
+                    data_cadastro=None,
+                ),
+            ),
+            produtos=(
+                ProdutoOrigem(
+                    origem=FonteDados.ITABUNA,
+                    id_produto="1",
+                    nome="Produto",
+                    categoria=None,
+                    preco=Decimal("1"),
+                ),
+            ),
+            vendas=(
+                VendaOrigem(
+                    origem=FonteDados.ITABUNA,
+                    id_venda="1",
+                    id_cliente="1",
+                    data_venda=date(2024, 12, 1),
+                    valor_total=None,
+                ),
+            ),
+            itens_venda=(
+                ItemVendaOrigem(
+                    origem=FonteDados.ITABUNA,
+                    id_item="1",
+                    id_venda="1",
+                    id_produto="1",
+                    quantidade=1,
+                    valor_unitario=Decimal("1"),
+                ),
+            ),
+        )
+
+        silver = ServicoTransformacao().transformar_silver((dados,))
+
+        self.assertEqual(silver.vendas[0].cidade, "Itabuna")
+        self.assertEqual(silver.vendas[0].quadrimestre, 3)
+        self.assertEqual(silver.vendas[0].categoria, "Sem categoria")
+        self.assertEqual(silver.vendas[0].estado_civil, "Nao informado")

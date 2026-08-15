@@ -7,20 +7,20 @@ from collections.abc import Sequence
 from config import carregar_configuracao
 from infrastructure import GerenciadorConexoes
 
-from bootstrap import criar_pipeline
+from bootstrap import criar_pipeline, criar_repositorio_olap
 
 
 def main(argumentos: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Ferramentas do ETL do Pet Shop Nosso Aumigo.")
     subcomandos = parser.add_subparsers(dest="comando", required=True)
     subcomandos.add_parser("verificar-conexoes", help="Valida as tres fontes operacionais.")
-    subcomandos.add_parser("preparar-lote", help="Extrai e transforma dados sem carregar um OLAP.")
+    subcomandos.add_parser("carregar-olap", help="Atualiza a estrela Gold no PostgreSQL OLAP.")
     args = parser.parse_args(argumentos)
 
     if args.comando == "verificar-conexoes":
         _verificar_conexoes()
-    elif args.comando == "preparar-lote":
-        lote = criar_pipeline().preparar_lote()
+    elif args.comando == "carregar-olap":
+        lote = criar_pipeline().executar(criar_repositorio_olap())
         print(json.dumps(lote.quantidades(), indent=2, sort_keys=True))
 
     return 0
