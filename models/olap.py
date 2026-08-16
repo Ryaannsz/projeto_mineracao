@@ -6,36 +6,34 @@ from decimal import Decimal
 
 @dataclass(frozen=True, slots=True)
 class DimensaoTempo:
-    chave_natural: str
     ano: int
     quadrimestre: int
 
 
 @dataclass(frozen=True, slots=True)
 class DimensaoProduto:
-    chave_natural: str
     nome: str
     categoria: str
 
 
 @dataclass(frozen=True, slots=True)
 class DimensaoCidade:
-    chave_natural: str
     cidade: str
 
 
 @dataclass(frozen=True, slots=True)
 class DimensaoEstadoCivil:
-    chave_natural: str
     descricao: str
 
 
 @dataclass(frozen=True, slots=True)
 class FatoVenda:
-    chave_tempo_natural: str
-    chave_produto_natural: str
-    chave_cidade_natural: str
-    chave_estado_civil_natural: str
+    ano: int
+    quadrimestre: int
+    produto: str
+    categoria: str
+    cidade: str
+    estado_civil: str
     quantidade_vendida: int
     valor_vendido: Decimal
 

@@ -1,6 +1,5 @@
 CREATE TABLE dim_tempo (
     id_tempo SMALLINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    chave_natural VARCHAR(16) NOT NULL UNIQUE,
     ano SMALLINT NOT NULL,
     quadrimestre SMALLINT NOT NULL CHECK (quadrimestre BETWEEN 1 AND 3),
     CONSTRAINT uq_dim_tempo_periodo UNIQUE (ano, quadrimestre)
@@ -8,20 +7,18 @@ CREATE TABLE dim_tempo (
 
 CREATE TABLE dim_produto (
     id_produto BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    chave_natural VARCHAR(255) NOT NULL UNIQUE,
     nome VARCHAR(100) NOT NULL,
-    categoria VARCHAR(50) NOT NULL
+    categoria VARCHAR(50) NOT NULL,
+    CONSTRAINT uq_dim_produto UNIQUE (nome, categoria)
 );
 
 CREATE TABLE dim_cidade (
     id_cidade SMALLINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    chave_natural VARCHAR(100) NOT NULL UNIQUE,
     cidade VARCHAR(100) NOT NULL UNIQUE
 );
 
 CREATE TABLE dim_estado_civil (
     id_estado_civil SMALLINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    chave_natural VARCHAR(100) NOT NULL UNIQUE,
     descricao VARCHAR(50) NOT NULL UNIQUE
 );
 

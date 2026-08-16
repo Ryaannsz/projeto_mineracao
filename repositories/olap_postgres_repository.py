@@ -31,10 +31,10 @@ class RepositorioOlapPostgres:
                     """,
                     [
                         (
-                            ids_tempo[fato.chave_tempo_natural],
-                            ids_produto[fato.chave_produto_natural],
-                            ids_cidade[fato.chave_cidade_natural],
-                            ids_estado_civil[fato.chave_estado_civil_natural],
+                            ids_tempo[(fato.ano, fato.quadrimestre)],
+                            ids_produto[(fato.produto, fato.categoria)],
+                            ids_cidade[fato.cidade],
+                            ids_estado_civil[fato.estado_civil],
                             fato.quantidade_vendida,
                             fato.valor_vendido,
                         )
@@ -44,38 +44,37 @@ class RepositorioOlapPostgres:
             conexao.commit()
 
     @staticmethod
-    def _inserir_tempos(cursor, lote: LoteOlap) -> dict[str, int]:
+    def _inserir_tempos(cursor, lote: LoteOlap) -> dict[tuple[int, int], int]:
         cursor.executemany(
-            "INSERT INTO dim_tempo (chave_natural, ano, quadrimestre) VALUES (%s, %s, %s)",
-            [(item.chave_natural, item.ano, item.quadrimestre) for item in lote.tempos],
+            "INSERT INTO dim_tempo (ano, quadrimestre) VALUES (%s, %s)",
+            [(item.ano, item.quadrimestre) for item in lote.tempos],
         )
-        return RepositorioOlapPostgres._mapear_ids(cursor, "dim_tempo")
+        cursor.execute("SELECT ano, quadrimestre, id_tempo FROM dim_tempo")
+        return {(ano, quadrimestre): id_tempo for ano, quadrimestre, id_tempo in cursor.fetchall()}
 
     @staticmethod
-    def _inserir_produtos(cursor, lote: LoteOlap) -> dict[str, int]:
+    def _inserir_produtos(cursor, lote: LoteOlap) -> dict[tuple[str, str], int]:
         cursor.executemany(
-            "INSERT INTO dim_produto (chave_natural, nome, categoria) VALUES (%s, %s, %s)",
-            [(item.chave_natural, item.nome, item.categoria) for item in lote.produtos],
+            "INSERT INTO dim_produto (nome, categoria) VALUES (%s, %s)",
+            [(item.nome, item.categoria) for item in lote.produtos],
         )
-        return RepositorioOlapPostgres._mapear_ids(cursor, "dim_produto")
+        cursor.execute("SELECT nome, categoria, id_produto FROM dim_produto")
+        return {(nome, categoria): id_produto for nome, categoria, id_produto in cursor.fetchall()}
 
     @staticmethod
     def _inserir_cidades(cursor, lote: LoteOlap) -> dict[str, int]:
         cursor.executemany(
-            "INSERT INTO dim_cidade (chave_natural, cidade) VALUES (%s, %s)",
-            [(item.chave_natural, item.cidade) for item in lote.cidades],
+            "INSERT INTO dim_cidade (cidade) VALUES (%s)",
+            [(item.cidade,) for item in lote.cidades],
         )
-        return RepositorioOlapPostgres._mapear_ids(cursor, "dim_cidade")
+        cursor.execute("SELECT cidade, id_cidade FROM dim_cidade")
+        return dict(cursor.fetchall())
 
     @staticmethod
     def _inserir_estados_civis(cursor, lote: LoteOlap) -> dict[str, int]:
         cursor.executemany(
-            "INSERT INTO dim_estado_civil (chave_natural, descricao) VALUES (%s, %s)",
-            [(item.chave_natural, item.descricao) for item in lote.estados_civis],
+            "INSERT INTO dim_estado_civil (descricao) VALUES (%s)",
+            [(item.descricao,) for item in lote.estados_civis],
         )
-        return RepositorioOlapPostgres._mapear_ids(cursor, "dim_estado_civil")
-
-    @staticmethod
-    def _mapear_ids(cursor, tabela: str) -> dict[str, int]:
-        cursor.execute(f"SELECT chave_natural, id_{tabela.removeprefix('dim_')} FROM {tabela}")
+        cursor.execute("SELECT descricao, id_estado_civil FROM dim_estado_civil")
         return dict(cursor.fetchall())

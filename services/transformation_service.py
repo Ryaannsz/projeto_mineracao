@@ -75,48 +75,56 @@ class ServicoTransformacao:
         return LoteSilver(vendas=tuple(vendas_silver))
 
     def transformar_gold(self, silver: LoteSilver) -> LoteOlap:
-        tempos: dict[str, DimensaoTempo] = {}
-        produtos: dict[str, DimensaoProduto] = {}
+        tempos: dict[tuple[int, int], DimensaoTempo] = {}
+        produtos: dict[tuple[str, str], DimensaoProduto] = {}
         cidades: dict[str, DimensaoCidade] = {}
         estados_civis: dict[str, DimensaoEstadoCivil] = {}
-        agregados: dict[tuple[str, str, str, str], list] = defaultdict(
+        agregados: dict[tuple[int, int, str, str, str, str], list] = defaultdict(
             lambda: [0, Decimal("0")]
         )
 
         for venda in silver.vendas:
-            chave_tempo = f"{venda.ano}Q{venda.quadrimestre}"
-            chave_produto = _chave_produto(venda.produto, venda.categoria)
-            chave_cidade = _chave_texto(venda.cidade)
-            chave_estado_civil = _chave_texto(venda.estado_civil)
-
-            tempos[chave_tempo] = DimensaoTempo(chave_tempo, venda.ano, venda.quadrimestre)
-            produtos[chave_produto] = DimensaoProduto(chave_produto, venda.produto, venda.categoria)
-            cidades[chave_cidade] = DimensaoCidade(chave_cidade, venda.cidade)
-            estados_civis[chave_estado_civil] = DimensaoEstadoCivil(
-                chave_estado_civil, venda.estado_civil
+            tempos[(venda.ano, venda.quadrimestre)] = DimensaoTempo(
+                venda.ano, venda.quadrimestre
             )
-            agregado = agregados[(chave_tempo, chave_produto, chave_cidade, chave_estado_civil)]
+            produto_padronizado = (_chave_texto(venda.produto), _chave_texto(venda.categoria))
+            produtos.setdefault(
+                produto_padronizado,
+                DimensaoProduto(venda.produto, venda.categoria),
+            )
+            cidades[venda.cidade] = DimensaoCidade(venda.cidade)
+            estados_civis[venda.estado_civil] = DimensaoEstadoCivil(venda.estado_civil)
+            agregado = agregados[
+                (
+                    venda.ano,
+                    venda.quadrimestre,
+                    produto_padronizado[0],
+                    produto_padronizado[1],
+                    venda.cidade,
+                    venda.estado_civil,
+                )
+            ]
             agregado[0] += venda.quantidade
             agregado[1] += venda.valor_vendido
 
         fatos = tuple(
             FatoVenda(
-                chave_tempo_natural=chaves[0],
-                chave_produto_natural=chaves[1],
-                chave_cidade_natural=chaves[2],
-                chave_estado_civil_natural=chaves[3],
+                ano=chaves[0],
+                quadrimestre=chaves[1],
+                produto=produtos[(chaves[2], chaves[3])].nome,
+                categoria=produtos[(chaves[2], chaves[3])].categoria,
+                cidade=chaves[4],
+                estado_civil=chaves[5],
                 quantidade_vendida=valores[0],
                 valor_vendido=valores[1],
             )
             for chaves, valores in sorted(agregados.items())
         )
         return LoteOlap(
-            tempos=tuple(sorted(tempos.values(), key=lambda item: item.chave_natural)),
-            produtos=tuple(sorted(produtos.values(), key=lambda item: item.chave_natural)),
-            cidades=tuple(sorted(cidades.values(), key=lambda item: item.chave_natural)),
-            estados_civis=tuple(
-                sorted(estados_civis.values(), key=lambda item: item.chave_natural)
-            ),
+            tempos=tuple(sorted(tempos.values(), key=lambda item: (item.ano, item.quadrimestre))),
+            produtos=tuple(sorted(produtos.values(), key=lambda item: (item.nome, item.categoria))),
+            cidades=tuple(sorted(cidades.values(), key=lambda item: item.cidade)),
+            estados_civis=tuple(sorted(estados_civis.values(), key=lambda item: item.descricao)),
             fatos_vendas=fatos,
         )
 
@@ -154,10 +162,6 @@ def _normalizar_estado_civil(valor: str | None) -> str:
         "uniao estavel": "Uniao Estavel",
     }
     return valores.get(chave, _normalizar_texto(valor) or "Nao informado")
-
-
-def _chave_produto(nome: str, categoria: str) -> str:
-    return f"{_chave_texto(nome)}|{_chave_texto(categoria)}"
 
 
 def _chave_texto(valor: str | None) -> str:
