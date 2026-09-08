@@ -27,6 +27,38 @@ _CIDADE_POR_FONTE = {
 }
 
 
+# Catálogo analítico comum às três filiais. As fontes usam tanto nomes sem
+# acentuação quanto categorias ausentes ou com a codificação corrompida; por
+# isso, a dimensão de produto não pode depender da descrição da categoria de
+# origem.
+_PRODUTOS_CANONICOS = {
+    "racao premium caes": ("Ração Premium Cães", "Rações"),
+    "racao premium gatos": ("Ração Premium Gatos", "Rações"),
+    "antipulgas": ("Antipulgas", "Medicamentos"),
+    "vermifugo": ("Vermífugo", "Medicamentos"),
+    "coleira nylon": ("Coleira Nylon", "Acessórios"),
+    "guia retratil": ("Guia Retrátil", "Acessórios"),
+    "bola borracha": ("Bola Borracha", "Brinquedos"),
+    "corda mordedor": ("Corda Mordedor", "Brinquedos"),
+    "shampoo pet": ("Shampoo Pet", "Higiene"),
+    "petisco bifinho": ("Petisco Bifinho", "Petiscos"),
+    "cama luxo": ("Cama Luxo", "Camas"),
+    "comedouro inox": ("Comedouro Inox", "Comedouros"),
+    "tapete higienico premium": ("Tapete Higiênico Premium", "Higiene"),
+    "osso mastigavel natural": ("Osso Mastigável Natural", "Petiscos"),
+    "bebedouro automatico": ("Bebedouro Automático", "Acessórios"),
+    "escova para pelos": ("Escova para Pelos", "Higiene"),
+    "caixa de transporte": ("Caixa de Transporte", "Acessórios"),
+}
+
+# Formas encontradas quando uma string UTF-8 é lida com codificação incorreta.
+_ALIASES_PRODUTOS = {
+    "rao premium ces": "racao premium caes",
+    "racao premium ces": "racao premium caes",
+    "rao premium gatos": "racao premium gatos",
+}
+
+
 class ServicoTransformacao:
     """Constroi as camadas Silver e Gold das vendas de produtos proprias."""
 
@@ -57,6 +89,9 @@ class ServicoTransformacao:
                     raise ValueError(f"Item {item.id_item} sem produto correspondente.")
 
                 data_venda = venda.data_venda
+                produto_nome, produto_categoria = _normalizar_produto(
+                    produto.nome, produto.categoria
+                )
                 vendas_silver.append(
                     VendaSilver(
                         origem=dados.origem,
@@ -65,8 +100,8 @@ class ServicoTransformacao:
                         data_venda=data_venda,
                         ano=data_venda.year,
                         quadrimestre=(data_venda.month - 1) // 4 + 1,
-                        produto=_texto_obrigatorio(produto.nome),
-                        categoria=_normalizar_texto(produto.categoria) or "Sem categoria",
+                        produto=produto_nome,
+                        categoria=produto_categoria,
                         estado_civil=_normalizar_estado_civil(cliente.estado_civil),
                         quantidade=item.quantidade,
                         valor_vendido=item.quantidade * item.valor_unitario,
@@ -162,6 +197,15 @@ def _normalizar_estado_civil(valor: str | None) -> str:
         "uniao estavel": "Uniao Estavel",
     }
     return valores.get(chave, _normalizar_texto(valor) or "Nao informado")
+
+
+def _normalizar_produto(nome: str, categoria: str | None) -> tuple[str, str]:
+    """Converte variações das fontes para o catálogo de 17 produtos do OLAP."""
+    chave = _ALIASES_PRODUTOS.get(_chave_texto(nome), _chave_texto(nome))
+    produto_canonico = _PRODUTOS_CANONICOS.get(chave)
+    if produto_canonico is not None:
+        return produto_canonico
+    return _texto_obrigatorio(nome), _normalizar_texto(categoria) or "Sem categoria"
 
 
 def _chave_texto(valor: str | None) -> str:

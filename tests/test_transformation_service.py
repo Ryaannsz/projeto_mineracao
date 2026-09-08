@@ -132,3 +132,75 @@ class ServicoTransformacaoTest(TestCase):
         self.assertEqual(silver.vendas[0].quadrimestre, 3)
         self.assertEqual(silver.vendas[0].categoria, "Sem categoria")
         self.assertEqual(silver.vendas[0].estado_civil, "Nao informado")
+
+    def test_padroniza_produto_e_categoria_corrompida_no_catalogo(self) -> None:
+        dados = DadosFonte(
+            origem=FonteDados.SALVADOR,
+            clientes=(
+                ClienteOrigem(
+                    origem=FonteDados.SALVADOR,
+                    id_cliente="1",
+                    nome="Ana Silva",
+                    email=None,
+                    telefone=None,
+                    sexo=None,
+                    estado_civil="C",
+                    data_nascimento=None,
+                    data_cadastro=None,
+                ),
+            ),
+            produtos=(
+                ProdutoOrigem(
+                    origem=FonteDados.SALVADOR,
+                    id_produto="1",
+                    nome="Racao Premium Caes",
+                    categoria="Raï¿½ï¿½es",
+                    preco=Decimal("129.90"),
+                ),
+                ProdutoOrigem(
+                    origem=FonteDados.SALVADOR,
+                    id_produto="2",
+                    nome="Ração Premium Cães",
+                    categoria="Rações",
+                    preco=Decimal("129.90"),
+                ),
+            ),
+            vendas=(
+                VendaOrigem(
+                    origem=FonteDados.SALVADOR,
+                    id_venda="1",
+                    id_cliente="1",
+                    data_venda=date(2025, 1, 1),
+                    valor_total=None,
+                ),
+            ),
+            itens_venda=(
+                ItemVendaOrigem(
+                    origem=FonteDados.SALVADOR,
+                    id_item="1",
+                    id_venda="1",
+                    id_produto="1",
+                    quantidade=1,
+                    valor_unitario=Decimal("129.90"),
+                ),
+                ItemVendaOrigem(
+                    origem=FonteDados.SALVADOR,
+                    id_item="2",
+                    id_venda="1",
+                    id_produto="2",
+                    quantidade=2,
+                    valor_unitario=Decimal("129.90"),
+                ),
+            ),
+        )
+
+        transformacao = ServicoTransformacao()
+        silver = transformacao.transformar_silver((dados,))
+        gold = transformacao.transformar_gold(silver)
+
+        self.assertEqual(
+            {(venda.produto, venda.categoria) for venda in silver.vendas},
+            {("Ração Premium Cães", "Rações")},
+        )
+        self.assertEqual(gold.quantidades()["dimensao_produtos"], 1)
+        self.assertEqual(gold.fatos_vendas[0].quantidade_vendida, 3)
