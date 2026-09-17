@@ -2,6 +2,7 @@ from .contracts import RepositorioFonte, RepositorioOlap
 from .mongodb_repository import RepositorioMongo
 from .oracle_repository import RepositorioOracle
 from .olap_postgres_repository import RepositorioOlapPostgres
+from .planilha_concorrente_repository import RepositorioPlanilhaConcorrente
 from .postgres_repository import RepositorioPostgres
 
 __all__ = [
@@ -10,5 +11,6 @@ __all__ = [
     "RepositorioOlap",
     "RepositorioOlapPostgres",
     "RepositorioOracle",
+    "RepositorioPlanilhaConcorrente",
     "RepositorioPostgres",
 ]

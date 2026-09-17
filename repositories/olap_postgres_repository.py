@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from models import LoteOlap
+from models import LoteOlap, LoteOlapConcorrente
 
 from infrastructure import GerenciadorConexoes
 
@@ -78,3 +78,32 @@ class RepositorioOlapPostgres:
         )
         cursor.execute("SELECT descricao, id_estado_civil FROM dim_estado_civil")
         return dict(cursor.fetchall())
+
+    def carregar_concorrente(self, lote: LoteOlapConcorrente) -> None:
+        with self._conexoes.olap() as conexao:
+            with conexao.cursor() as cursor:
+                cursor.execute("TRUNCATE fato_vendas_concorrente")
+                ids_tempo = self._garantir_tempos(cursor, lote)
+                cursor.executemany(
+                    """
+                    INSERT INTO fato_vendas_concorrente (id_tempo, valor_vendido)
+                    VALUES (%s, %s)
+                    """,
+                    [
+                        (ids_tempo[(fato.ano, fato.quadrimestre)], fato.valor_vendido)
+                        for fato in lote.fatos_vendas_concorrente
+                    ],
+                )
+            conexao.commit()
+
+    @staticmethod
+    def _garantir_tempos(cursor, lote: LoteOlapConcorrente) -> dict[tuple[int, int], int]:
+        """Garante em dim_tempo os periodos da concorrente, mesmo sem venda propria."""
+        periodos = {(fato.ano, fato.quadrimestre) for fato in lote.fatos_vendas_concorrente}
+        cursor.executemany(
+            "INSERT INTO dim_tempo (ano, quadrimestre) VALUES (%s, %s) "
+            "ON CONFLICT (ano, quadrimestre) DO NOTHING",
+            list(periodos),
+        )
+        cursor.execute("SELECT ano, quadrimestre, id_tempo FROM dim_tempo")
+        return {(ano, quadrimestre): id_tempo for ano, quadrimestre, id_tempo in cursor.fetchall()}

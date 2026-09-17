@@ -46,6 +46,7 @@ class ConfiguracaoAplicacao:
     postgres: ConfiguracaoPostgres
     mongo: ConfiguracaoMongo
     olap: ConfiguracaoOlap
+    planilha_concorrente: str
 
 
 def carregar_configuracao() -> ConfiguracaoAplicacao:
@@ -85,5 +86,8 @@ def carregar_configuracao() -> ConfiguracaoAplicacao:
             banco=os.getenv("OLAP_POSTGRES_DB", "petshop_olap"),
             usuario=os.getenv("OLAP_POSTGRES_USER", "petshop"),
             senha=os.getenv("OLAP_POSTGRES_PASSWORD", "Olap123"),
+        ),
+        planilha_concorrente=os.getenv(
+            "CONCORRENTE_XLSX_PATH", "data/planilhas/08_vendas_concorrente.xlsx"
         ),
     )
