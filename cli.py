@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from config import carregar_configuracao
 from infrastructure import GerenciadorConexoes
 
-from bootstrap import criar_pipeline, criar_repositorio_olap
+from bootstrap import criar_pipeline, criar_pipeline_concorrente, criar_repositorio_olap
 
 
 def main(argumentos: Sequence[str] | None = None) -> int:
@@ -20,8 +20,11 @@ def main(argumentos: Sequence[str] | None = None) -> int:
     if args.comando == "verificar-conexoes":
         _verificar_conexoes()
     elif args.comando == "carregar-olap":
-        lote = criar_pipeline().executar(criar_repositorio_olap())
-        print(json.dumps(lote.quantidades(), indent=2, sort_keys=True))
+        repositorio_olap = criar_repositorio_olap()
+        lote = criar_pipeline().executar(repositorio_olap)
+        lote_concorrente = criar_pipeline_concorrente().executar(repositorio_olap)
+        quantidades = {**lote.quantidades(), **lote_concorrente.quantidades()}
+        print(json.dumps(quantidades, indent=2, sort_keys=True))
 
     return 0
 

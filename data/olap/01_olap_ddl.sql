@@ -34,3 +34,11 @@ CREATE TABLE fato_vendas (
         id_tempo, id_produto, id_cidade, id_estado_civil
     )
 );
+
+-- Vendas da concorrente, grao ano x quadrimestre (dim_tempo compartilhada
+-- com fato_vendas). A fonte (planilha Excel) so traz valor mensal agregado,
+-- sem quantidade, produto, cidade ou perfil de cliente.
+CREATE TABLE fato_vendas_concorrente (
+    id_tempo SMALLINT PRIMARY KEY REFERENCES dim_tempo(id_tempo),
+    valor_vendido NUMERIC(14,2) NOT NULL CHECK (valor_vendido >= 0)
+);

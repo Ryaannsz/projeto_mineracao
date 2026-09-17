@@ -1,3 +1,10 @@
+from .concorrente import (
+    FatoVendaConcorrente,
+    LoteOlapConcorrente,
+    LoteSilverConcorrente,
+    VendaConcorrenteOrigem,
+    VendaConcorrenteSilver,
+)
 from .olap import (
     DimensaoCidade,
     DimensaoEstadoCivil,
@@ -28,12 +35,17 @@ __all__ = [
     "DimensaoProduto",
     "DimensaoTempo",
     "FatoVenda",
+    "FatoVendaConcorrente",
     "FonteDados",
     "ItemVendaOrigem",
     "LoteOlap",
+    "LoteOlapConcorrente",
     "LoteSilver",
+    "LoteSilverConcorrente",
     "ProdutoOrigem",
     "ServicoOrigem",
+    "VendaConcorrenteOrigem",
+    "VendaConcorrenteSilver",
     "VendaOrigem",
     "VendaSilver",
     "chave_origem",

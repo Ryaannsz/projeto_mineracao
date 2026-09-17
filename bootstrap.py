@@ -6,9 +6,16 @@ from repositories import (
     RepositorioMongo,
     RepositorioOlapPostgres,
     RepositorioOracle,
+    RepositorioPlanilhaConcorrente,
     RepositorioPostgres,
 )
-from services import ServicoExtracao, ServicoPipeline, ServicoTransformacao
+from services import (
+    ServicoExtracao,
+    ServicoPipeline,
+    ServicoPipelineConcorrente,
+    ServicoTransformacao,
+    ServicoTransformacaoConcorrente,
+)
 
 
 def criar_pipeline(configuracao: ConfiguracaoAplicacao | None = None) -> ServicoPipeline:
@@ -22,6 +29,15 @@ def criar_pipeline(configuracao: ConfiguracaoAplicacao | None = None) -> Servico
         )
     )
     return ServicoPipeline(extracao, ServicoTransformacao())
+
+
+def criar_pipeline_concorrente(
+    configuracao: ConfiguracaoAplicacao | None = None,
+) -> ServicoPipelineConcorrente:
+    """Monta o pipeline da planilha de vendas da concorrente."""
+    configuracao = configuracao or carregar_configuracao()
+    extracao = RepositorioPlanilhaConcorrente(configuracao.planilha_concorrente)
+    return ServicoPipelineConcorrente(extracao, ServicoTransformacaoConcorrente())
 
 
 def criar_repositorio_olap(
